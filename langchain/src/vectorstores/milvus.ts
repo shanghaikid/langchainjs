@@ -1,13 +1,11 @@
 import * as uuid from "uuid";
-import { MilvusClient } from "@zilliz/milvus2-sdk-node";
 import {
+  MilvusClient,
   DataType,
   DataTypeMap,
-} from "@zilliz/milvus2-sdk-node/dist/milvus/const/Milvus.js";
-import {
   ErrorCode,
   FieldType,
-} from "@zilliz/milvus2-sdk-node/dist/milvus/types.js";
+} from "@zilliz/milvus2-sdk-node";
 
 import { Embeddings } from "../embeddings/base.js";
 import { VectorStore } from "./base.js";
@@ -101,7 +99,12 @@ export class Milvus extends VectorStore {
     if (!url) {
       throw new Error("Milvus URL address is not provided.");
     }
-    this.client = new MilvusClient(url, args.ssl, args.username, args.password);
+    this.client = new MilvusClient({
+      address: url,
+      ssl: args.ssl,
+      username: args.username,
+      password: args.password,
+    });
   }
 
   async addDocuments(documents: Document[]): Promise<void> {
@@ -218,7 +221,7 @@ export class Milvus extends VectorStore {
       throw new Error(`Error searching data: ${JSON.stringify(searchResp)}`);
     }
     const results: [Document, number][] = [];
-    searchResp.results.forEach((result) => {
+    searchResp.results.forEach((result: any) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fields = { pageContent: "", metadata: {} as Record<string, any> };
       Object.keys(result).forEach((key) => {
@@ -333,7 +336,7 @@ export class Milvus extends VectorStore {
     const desc = await this.client.describeCollection({
       collection_name: this.collectionName,
     });
-    desc.schema.fields.forEach((field) => {
+    desc.schema.fields.forEach((field: any) => {
       this.fields.push(field.name);
       if (field.autoID) {
         const index = this.fields.indexOf(field.name);
@@ -362,6 +365,7 @@ export class Milvus extends VectorStore {
     dbConfig?: {
       collectionName?: string;
       url?: string;
+      ssl?: boolean;
     }
   ): Promise<Milvus> {
     const docs: Document[] = [];
@@ -384,6 +388,7 @@ export class Milvus extends VectorStore {
     const args: MilvusLibArgs = {
       collectionName: dbConfig?.collectionName || genCollectionName(),
       url: dbConfig?.url,
+      ssl: dbConfig?.ssl,
     };
     const instance = new this(embeddings, args);
     await instance.addDocuments(docs);
